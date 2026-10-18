@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Настройка виджета — Now Playing для OBS</title>
+<style>
+  :root{
+    --bg:#0b0f12; --panel:#12181c; --line:#222c31; --text:#eef2f4;
+    --mute:#8b9aa2; --accent:#ff00a0; --amber:#f09000;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.02em}
+  .pill{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);
+    border:1px solid rgba(240,144,0,.4);padding:3px 8px;border-radius:2px}
+  .wrap{display:grid;grid-template-columns:340px 1fr;gap:24px;padding:24px;align-items:start}
+  @media (max-width:980px){ .wrap{grid-template-columns:1fr} }
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px}
+  .card h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);
+    margin:0 0 12px;font-weight:600}
+
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
+  select,input[type=text],input[type=number]{
+    width:100%;background:#0d1215;border:1px solid var(--line);color:var(--text);
+    border-radius:3px;padding:7px 9px;font:inherit}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=color]{width:100%;height:34px;background:#0d1215;border:1px solid var(--line);
+    border-radius:3px;padding:2px}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);
+    padding:6px 0;cursor:pointer;user-select:none}
+  .chk input{accent-color:var(--accent);width:15px;height:15px}
+  .val{float:right;color:var(--text);font-variant-numeric:tabular-nums}
+
+  .preview{position:relative;border:1px solid var(--line);border-radius:4px;overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 15% 10%, #1d2b33 0%, #0a0f12 55%, #05080a 100%);
+    aspect-ratio:16/9}
+  .preview iframe{position:absolute;top:0;left:0;width:1920px;height:1080px;
+    border:0;transform-origin:top left;pointer-events:none}
+  .pnote{font-size:12px;color:var(--mute);margin-top:10px}
+
+  .out{margin-top:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:4px;padding:16px}
+  code,textarea{font-family:Consolas,ui-monospace,monospace;font-size:12.5px}
+  textarea{width:100%;height:74px;background:#0d1215;border:1px solid var(--line);
+    color:var(--text);border-radius:3px;padding:10px;resize:vertical}
+  .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  button{background:var(--accent);color:#fff;border:0;border-radius:3px;padding:9px 16px;
+    font:inherit;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:400}
+  button:active{transform:translateY(1px)}
+  ol{margin:10px 0 0 18px;padding:0;color:var(--mute);font-size:13px}
+  ol li{margin-bottom:4px}
+  a{color:var(--amber)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Now Playing — виджет для OBS</h1>
+  <span class="pill">конфигуратор</span>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h2>Вид</h2>
+
+    <div class="field">
+      <label>Стиль</label>
+      <select id="style">
+        <option value="card">Карточка (по умолчанию)</option>
+        <option value="glass">Стекло (размытие фона)</option>
+        <option value="plain">Без подложки (только текст)</option>
+        <option value="strip">Полоса во всю ширину</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Положение</label>
+      <select id="pos">
+        <option value="top">Сверху по центру</option>
+        <option value="bottom">Снизу по центру</option>
+        <option value="tl">Слева сверху</option>
+        <option value="tr">Справа сверху</option>
+        <option value="bl">Слева снизу</option>
+        <option value="br">Справа снизу</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Ширина <span class="val" id="wv">764</span></label>
+      <input type="range" id="w" min="360" max="1200" step="4" value="764">
+    </div>
+
+    <h2 style="margin-top:18px">Цвета</h2>
+
+    <div class="row">
+      <div class="field">
+        <label>Акцент</label>
+        <input type="color" id="accent" value="#ff00a0">
+      </div>
+      <div class="field">
+        <label>Второй цвет</label>
+        <input type="color" id="accent2" value="#f09000">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Фон</label>
+        <input type="color" id="bg" value="#050a0c">
+      </div>
+      <div class="field">
+        <label>Текст</label>
+        <input type="color" id="text" value="#f6f2ec">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Прозрачность фона <span class="val" id="av">90%</span></label>
+      <input type="range" id="bgalpha" min="0" max="100" step="1" value="90">
+    </div>
+
+    <div class="field">
+      <label>Скругление <span class="val" id="rv">2px</span></label>
+      <input type="range" id="radius" min="0" max="24" step="1" value="2">
+    </div>
+
+    <h2 style="margin-top:18px">Элементы</h2>
+
+    <label class="chk"><input type="checkbox" id="art" checked> Обложка</label>
+    <label class="chk"><input type="checkbox" id="eq" checked> Эквалайзер</label>
+    <label class="chk"><input type="checkbox" id="progress" checked> Полоса прогресса</label>
+    <label class="chk"><input type="checkbox" id="time" checked> Время</label>
+    <label class="chk"><input type="checkbox" id="album" checked> Название альбома</label>
+    <label class="chk"><input type="checkbox" id="cap" checked> Подпись «Сейчас играет»</label>
+
+    <div class="field" style="margin-top:10px">
+      <label>Текст подписи</label>
+      <input type="text" id="label" placeholder="Сейчас играет">
+    </div>
+
+    <div class="field">
+      <label>Размер названия <span class="val" id="tv">24px</span></label>
+      <input type="range" id="title" min="14" max="40" step="1" value="24">
+    </div>
+  </div>
+
+  <div>
+    <div class="preview" id="prev"><iframe id="frame"></iframe></div>
+    <div class="pnote">Предпросмотр с демо-треком. В OBS виджет покажет то, что реально играет,
+      и сам скроется, когда музыка выключена.</div>
+
+    <div class="out">
+      <h2 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8b9aa2;margin:0 0 10px">
+        Ссылка для OBS</h2>
+      <textarea id="url" readonly></textarea>
+      <div class="actions">
+        <button id="copy">Скопировать ссылку</button>
+        <button class="ghost" id="reset">Сбросить</button>
+        <button class="ghost" id="open">Открыть в браузере</button>
+      </div>
+      <ol>
+        <li>OBS → Источники → <b>+</b> → <b>Браузер</b></li>
+        <li>Вставьте ссылку, ширина <b>2560</b>, высота <b>1440</b> (или 1920×1080)</li>
+        <li>Галочку «Завершать работу, когда не видно» снимите</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEYS = ["style","pos","w","accent","accent2","bg","text","bgalpha","radius",
+              "art","eq","progress","time","album","cap","label","title"];
+
+function state(){
+  const s = {};
+  s.style = $("style").value;
+  s.pos   = $("pos").value;
+  s.w     = $("w").value;
+  s.accent  = $("accent").value.replace("#","");
+  s.accent2 = $("accent2").value.replace("#","");
+  s.bg      = $("bg").value.replace("#","");
+  s.text    = $("text").value.replace("#","");
+  s.bgalpha = $("bgalpha").value;
+  s.radius  = $("radius").value;
+  s.title   = $("title").value;
+  for (const k of ["art","eq","progress","time","album","cap"])
+    s[k] = $(k).checked ? "1" : "0";
+  const lbl = $("label").value.trim();
+  if (lbl) s.label = lbl;
+  return s;
+}
+
+function query(s, demo){
+  const p = new URLSearchParams();
+  for (const k of KEYS){
+    if (s[k] === undefined) continue;
+    if (k === "w" && s[k] === "764") continue;
+    if (k === "title" && s[k] === "24") continue;
+    if (k === "style" && s[k] === "card") continue;
+    if (k === "pos" && s[k] === "top") continue;
+    if (k === "accent" && s[k] === "ff00a0") continue;
+    if (k === "accent2" && s[k] === "f09000") continue;
+    if (k === "bg" && s[k] === "050a0c") continue;
+    if (k === "text" && s[k] === "f6f2ec") continue;
+    if (k === "bgalpha" && s[k] === "90") continue;
+    if (k === "radius" && s[k] === "2") continue;
+    if (["art","eq","progress","time","album","cap"].includes(k) && s[k] === "1") continue;
+    p.set(k, s[k]);
+  }
+  if (demo) p.set("demo", "1");
+  const q = p.toString();
+  return q ? "?" + q : "";
+}
+
+function base(){ return location.origin + "/"; }
+
+function update(){
+  const s = state();
+  $("wv").textContent = s.w;
+  $("av").textContent = s.bgalpha + "%";
+  $("rv").textContent = s.radius + "px";
+  $("tv").textContent = s.title + "px";
+
+  $("frame").src = "widget.html" + query(s, true);
+  $("url").value  = base() + query(s, false);
+  scalePreview();
+}
+
+function scalePreview(){
+  const box = $("prev");
+  const f = $("frame");
+  const s = box.clientWidth / 1920;
+  f.style.transform = "scale(" + s + ")";
+}
+
+addEventListener("resize", scalePreview);
+document.querySelectorAll("input,select").forEach(e => e.addEventListener("input", update));
+$("copy").onclick = async () => {
+  $("url").select();
+  try { await navigator.clipboard.writeText($("url").value); }
+  catch(e){ document.execCommand("copy"); }
+  $("copy").textContent = "Скопировано";
+  setTimeout(() => $("copy").textContent = "Скопировать ссылку", 1400);
+};
+$("open").onclick = () => window.open($("url").value, "_blank");
+$("reset").onclick = () => {
+  $("style").value="card"; $("pos").value="top"; $("w").value=764;
+  $("accent").value="#ff00a0"; $("accent2").value="#f09000";
+  $("bg").value="#050a0c"; $("text").value="#f6f2ec";
+  $("bgalpha").value=90; $("radius").value=2; $("title").value=24;
+  for (const k of ["art","eq","progress","time","album","cap"]) $(k).checked = true;
+  $("label").value = "";
+  update();
+};
+update();
+</script>
+</body>
+</html>
